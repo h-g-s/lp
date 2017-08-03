@@ -2801,7 +2801,7 @@ double lp_col_ub(LinearProgram *lp, int col)
     return DBL_MAX; // keep compilers from complaining
 }
 
-void lp_set_obj(LinearProgram *lp, double *obj)
+void lp_set_obj(LinearProgram *lp, double obj[])
 {
     assert(lp != NULL);
 

@@ -1,3 +1,15 @@
+/**
+* @file lp.h
+* @brief Header for the C API of lp, including functions to
+* create, modify and optimize Mixed Integer Linear Programming 
+* Problems
+*
+* @author D.Sc. Haroldo G. Santos
+*
+* @date 8/2/2016
+*/
+
+
 #ifndef LP_HEADER
 #define LP_HEADER
 
@@ -69,16 +81,68 @@ void lp_fix_mipstart( LinearProgram *lp );
 
 
 /* Model creation, modification and destruction */
+
+/**
+* Creates an empty problem
+*/
 LinearProgram *lp_create();
+
+/**
+* Clones a problem
+*/
 LinearProgram *lp_clone( LinearProgram *lp );
+
+
+/**
+* Adds a new row (linear constraint) to the problem in lp
+* @param lp the (integer) linear program
+* @param nz number of non-zero variables in this row
+* @param indexes indices of variables
+* @param coefs coefficients of variables
+* @param name row name
+* @param sense E for equal, L for less-or-equal or G for greter-or-equal
+* @param rhs right-hand-side of constraint
+*/
 void lp_add_row( LinearProgram *lp, const int nz, int *indexes, double *coefs, const char *name, char sense, const double rhs );
+
+
+/**
+* Removes a row from lp
+* @param lp the (integer) linear program
+* @param idxRow row index
+*/
 void lp_remove_row( LinearProgram *lp, int idxRow );
+
+
+/** @brief Removes a set of rows from lp
+* Removes a set of rows from lp, calling this function is usually faster
+*  than to remove rows one-by-one
+*
+* @param lp the (integer) linear program
+* @param nRows number of rows
+* @param rows row indices
+*/
 void lp_remove_rows( LinearProgram *lp, int nRows, int *rows );
 
-/** @brief adds new columns
+/** @brief adds a new column (variable)
+ * 
+ * @param lp the (integer) linear program
+ * @param obj the objective function coefficient of this variable
+ * @param lb lower bound for this variable
+ * @param ub upper bound for this variable
+ * @param integer 1 if variable is integer, 0 otherwise
+ * @param name variable name
+ * @param nz number of non-zero entries of this column in the coefficient matrix
+ * @param rowIdx indices of rows where this column appears
+ * @param rowCoef coefficients that that this variable has in each of its rows
+ */
+void lp_add_col( LinearProgram *lp, double obj, double lb, double ub, char integer, char *name, int nz, int *rowIdx, double *rowCoef );
+
+/** @brief adds news column (variables)
  *
  *  adds new columns to lp, specifying objective function, bounds, integrality and names
  *
+ *  @param lp the (integer) linear program
  *  @param count number of columns
  *  @param obj objective function coefficients
  *  @param lb lower bounds - if NULL is specified then it is assumed that all variables have lb=0.0
@@ -87,16 +151,73 @@ void lp_remove_rows( LinearProgram *lp, int nRows, int *rows );
  *     are assumed to be integral
  *  @param names variable names
  */
-void lp_add_col( LinearProgram *lp, double obj, double lb, double ub, char integer, char *name, int nz, int *rowIdx, double *rowCoef );
 void lp_add_cols( LinearProgram *lp, const int count, double *obj, double *lb, double *ub, char *integer, char **name );
+
+/** @brief adds set of columns with the same bounds
+ *
+ *  @param lp the (integer) linear program
+ *  @param count number of columns
+ *  @param obj objective function coefficients
+ *  @param lb lower bound for these variables
+ *  @param ub upper bound for these variables
+ *  @param vector indicating if each variable is integer (1) or continuous (0)
+ */
 void lp_add_cols_same_bound( LinearProgram *lp, const int count, double *obj, double lb, double ub, char *integer, char **name );
+
+
+/** @brief adds a set of binary variables
+ *
+ *  @param lp the (integer) linear program
+ *  @param count number of columns
+ *  @param obj vector with objective function coefficients of these variables
+ *  @param obj vector variable names
+ */
 void lp_add_bin_cols( LinearProgram *lp, const int count, double *obj, char **name );
+
+/** @brief releases from memory the problem stored in lp
+ * 
+ *  @param lp the (integer) linear program, memory is freed and lp is set to NULL
+ */
 void lp_free( LinearProgramPtr *lp );
+
+/** @brief sets optimization direction, maximization or minimization
+ * 
+ *  @param lp the (integer) linear program
+ *  @param direction LP_MIN (0) for minimization (default) or LP_MAX (1) for maximization
+ */
 void lp_set_direction( LinearProgram *lp, const char direction );
+
+/** @brief returns optimization direction, minimization (LP_MIN) or maximization (LP_MAX)
+ * 
+ *  @param lp the (integer) linear program
+ */
 int lp_get_direction( LinearProgram *lp );
-void lp_set_obj( LinearProgram *lp, double *obj );
+
+/** @brief sets objective function coefficients
+ *
+ *  @param lp the (integer) linear program
+ *  @param obj objective function coefficients: obj[0] ... obj[n-1], where n is the number of columns
+ */
+void lp_set_obj( LinearProgram *lp, double obj[] );
+
+/** @brief changes a set of objective function coefficients
+ *
+ *  @param lp the (integer) linear program
+ *  @param count number of variables whose objective function coefficients will change
+ *  @param idx indices of variables whose objective function coefficients will change
+ *  @param coef vector with new coefficients
+ */
 void lp_chg_obj(LinearProgram *lp, int count, int idx[], double obj[] );
+
+/** @brief modifies the right-hand-side of a constraint
+ *
+ *  @param lp the (integer) linear program
+ *  @param row the row index
+ *  @param rhs right-hand-side of constraint
+ */
 void lp_set_rhs( LinearProgram *lp, int row, double rhs );
+
+
 void lp_set_col_bounds( LinearProgram *lp, int col, const double lb, const double ub );
 void lp_fix_col( LinearProgram *lp, int col, double val );
 void lp_set_integer( LinearProgram *lp, int nCols, int cols[] );
