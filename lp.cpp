@@ -3086,30 +3086,53 @@ void lp_config_cbc_params(LinearProgram *lp, vector<string> &cbcP)
     cbcP.push_back("someMIP"); // problem name
     if (lp->cuts != INT_NOT_SET) {
         if (lp->cuts)
-            cbcP.push_back("-cuts=on");
+        {
+            cbcP.push_back("-cuts");
+            cbcP.push_back("on");
+        }
         else
-            cbcP.push_back("-cuts=off");
+        {
+            cbcP.push_back("-cuts");
+            cbcP.push_back("off");
+        }
     }
     if (lp->printMessages != INT_NOT_SET) {
         if (lp->printMessages)
-            cbcP.push_back("-log=1");
+        {
+            cbcP.push_back("-log");
+            cbcP.push_back("1");
+        }
         else
-            cbcP.push_back("-log=0");
+        {
+            cbcP.push_back("-log");
+            cbcP.push_back("0");
+        }
     }
 
-    cbcP.push_back("-zero=ifmove");
-    cbcP.push_back("-multiple=2");
-    cbcP.push_back("-flow=off");
-    cbcP.push_back("-diveopt=7");
-    cbcP.push_back("-lagomory=endonly");
-    cbcP.push_back("-latwomir=endonly");
+    cbcP.push_back("-zero");
+    cbcP.push_back("ifmove");
+
+    cbcP.push_back("-multiple");
+    cbcP.push_back("2");
+
+    cbcP.push_back("-diveopt");
+    cbcP.push_back("7");
+
+    cbcP.push_back("-lagomory");
+    cbcP.push_back("endonly");
+
+    cbcP.push_back("-latwomir");
+    cbcP.push_back("endonly");
 
     if (lp->cutoff != DBL_MAX)
     {
-        char str[256]; sprintf( str, "cutoff=%g", lp->cutoff );
-        cbcP.push_back( str );
+        cbcP.push_back("-cutoff");
+        cbcP.push_back(SSTR(lp->cutoff));
         if (lp->cutoffAsConstraint)
-            cbcP.push_back( "constraintfromCutoff=on" );
+        {
+            cbcP.push_back( "-constraintfromCutoff" );
+            cbcP.push_back( "on" );
+        }
     }
 
     if ( lp->parallel != INT_NOT_SET )
@@ -3127,52 +3150,79 @@ void lp_config_cbc_params(LinearProgram *lp, vector<string> &cbcP)
 #endif
             if (lp->printMessages!=0)
                 printf("CBC will use %d threads.\n", nthreads );
-            char stropt[256];  sprintf( stropt, "-threads=%d", nthreads );
-            cbcP.push_back( stropt );
+            cbcP.push_back("-threads");
+            cbcP.push_back(SSTR(nthreads));
         }
         else
-            cbcP.push_back( "-threads=0" );
+        {
+            cbcP.push_back( "-threads" );
+            cbcP.push_back( "0" );
+        }
     }
 
     if (lp->maxSeconds != INT_NOT_SET)
     {
-        cbcP.push_back("-timeM=elapsed");
-        cbcP.push_back("-seconds=" + SSTR(lp->maxSeconds));
+        cbcP.push_back("-timeM");
+        cbcP.push_back("elapsed");
+        cbcP.push_back("-seconds");
+        cbcP.push_back(SSTR(lp->maxSeconds));
     }
     if (lp->maxSolutions != INT_NOT_SET)
-        cbcP.push_back("-maxSol=" + SSTR(lp->maxSolutions));
+    {
+        cbcP.push_back("-maxSol");
+        cbcP.push_back(SSTR(lp->maxSolutions));
+    }
     if (lp->maxNodes != INT_NOT_SET)
-        cbcP.push_back("-maxNodes=" + SSTR(lp->maxNodes));
+    {
+        cbcP.push_back("-maxNodes");
+        cbcP.push_back(SSTR(lp->maxNodes));
+    }
     if (lp->heurFPPasses  != INT_NOT_SET)
-        cbcP.push_back("-passF=" + SSTR(lp->heurFPPasses));
+    {
+        cbcP.push_back("-passF");
+        cbcP.push_back(SSTR(lp->heurFPPasses));
+    }
     if (lp->heurProx != INT_NOT_SET) {
         if (lp->heurProx)
-            cbcP.push_back("-proximity=on");
+        {
+            cbcP.push_back("-proximity");
+            cbcP.push_back("on");
+        }
         else
-            cbcP.push_back("-proximity=off");
+        {
+            cbcP.push_back("-proximity");
+            cbcP.push_back("off");
+        }
     }
     if (lp->maxSavedSols != INT_NOT_SET)
-        cbcP.push_back("-maxSaved=" + SSTR(lp->maxSavedSols));
+    {
+        cbcP.push_back("-maxSaved");
+        cbcP.push_back(SSTR(lp->maxSavedSols));
+    }
 
     if (strlen(lp->solInFN))
-        cbcP.push_back("-mips=" + string(lp->solInFN));
+    {
+        cbcP.push_back("-mips");
+        cbcP.push_back(lp->solInFN);
+    }
 
     if (lp->absMIPGap!=DBL_MAX)
     {
-        char pstr[256];
-        sprintf( pstr, "-allowableGap=%g", lp->absMIPGap );
-        cbcP.push_back(pstr);
+        cbcP.push_back("-allowableGap");
+        cbcP.push_back( SSTR(lp->absMIPGap) );
     }
     if (lp->relMIPGap!=DBL_MAX)
     {
-        char pstr[256];
-        sprintf( pstr, "-ratioGap=%g", lp->relMIPGap );
-        cbcP.push_back(pstr);
+        cbcP.push_back("-ratioGap");
+        cbcP.push_back(SSTR(lp->relMIPGap));
     }
     if ( lp->mipPreProcess != CHAR_MAX )
     {
         if (!lp->mipPreProcess)
-            cbcP.push_back("-preprocess=off");
+        {
+            cbcP.push_back("-preprocess");
+            cbcP.push_back("off");
+        }
     }
 
     cbcP.push_back("-solve");
