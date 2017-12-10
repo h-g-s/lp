@@ -9,3 +9,12 @@ CPLEX callable libeary, I was frustrated with the complex object oriented
 framework that one had to master to successfully use the COIN-OR CBC
 integer optimizer (OSI, CGL, CBC...).
 
+## Building
+
+Just add lp.cpp and lp.h to your project and specify your mip solver
+adding one of the following compilation directives: 
+    - -DCBC to build using the COIN-OR Branch-and-Cut solver
+    - -DGLPK to build using the GNU Linear Programming Kit (GLPK) solver
+    - -DCPX to build using the IBM CPLEX MIP Solver
+    - -DGRB to build using the Gurobi MIP Solver
+
