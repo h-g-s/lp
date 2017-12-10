@@ -13,8 +13,8 @@ integer optimizer (OSI, CGL, CBC...).
 
 Just add lp.cpp and lp.h to your project and specify your mip solver
 adding one of the following compilation directives: 
-    - -DCBC to build using the COIN-OR Branch-and-Cut solver
-    - -DGLPK to build using the GNU Linear Programming Kit (GLPK) solver
-    - -DCPX to build using the IBM CPLEX MIP Solver
-    - -DGRB to build using the Gurobi MIP Solver
+- -DCBC to build using the COIN-OR Branch-and-Cut solver
+- -DGLPK to build using the GNU Linear Programming Kit (GLPK) solver
+- -DCPX to build using the IBM CPLEX MIP Solver
+- -DGRB to build using the Gurobi MIP Solver
 
