@@ -994,7 +994,7 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
 
     for ( int i=0 ; (i<nRows) ; ++i )
     {
-        switch (topper(sense[i]))
+        switch (toupper(sense[i]))
         {
             case 'E':
                 rlb[i] = rub[i] = rhs[i];
@@ -1008,14 +1008,14 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
                 rub[i] = DBL_MAX;
                 break;
             default:
-                fprintf( stderr, "Sense %s not handled.\n", sense[i] );
+                fprintf( stderr, "Sense %c not handled.\n", sense[i] );
                 abort();
          }
     }
 
     int rt = lp_rows( lp );
 
-    lp->osiLP->addRows( lp, nRows, starts, idx, coef, rlb, rub );
+    lp->osiLP->addRows( nRows, starts, idx, coef, rlb, rub );
 
     if (name)
         for ( int i=0 ; (nRows) ; ++i )
@@ -1046,7 +1046,7 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
 
     for ( int i=0 ; (i<nRows) ; ++i )
     {
-        switch (topper(sense[i]))
+        switch (toupper(sense[i]))
         {
             case 'E':
                 glp_set_row_bnds( lp->_lp, r+i+1, GLP_FX, rhs[i], rhs[i] );
@@ -1058,7 +1058,7 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
                 glp_set_row_bnds( lp->_lp, r+i+1, GLP_LO, rhs[i], DBL_MAX );
                 break;
             default:
-                fprintf( stderr, "Sense %s not handled.\n", sense[i] );
+                fprintf( stderr, "Sense %c not handled.\n", sense[i] );
                 abort();
         }
 
