@@ -156,6 +156,20 @@ void lp_add_bin_cols( LinearProgram *lp, const int count, double *obj, char **na
 void lp_add_row( LinearProgram *lp, const int nz, int *indexes, double *coefs, const char *name, char sense, const double rhs );
 
 
+/**
+* Adds new rows (linear constraints) to the problem in lp
+* @param lp the (integer) linear program
+* @param nRows number of rows
+* @param vector indicating where each row i starts starts[i] and ends (starts[i]+1) in idx and coef
+* @param idx column indexes 
+* @param coef column coefficients
+* @param sense E for equal, L for less-or-equal or G for greter-or-equal
+* @param rhs right-hand-side of constraint
+* @param names row names
+*/
+void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *coef, char *sense, double *rhs, const char **names );
+
+
 /** @brief Removes a row from lp
 * 
 * @param lp the (integer) linear program
@@ -186,6 +200,7 @@ void lp_set_direction( LinearProgram *lp, const char direction );
 /** @brief returns optimization direction, minimization (LP_MIN) or maximization (LP_MAX)
  * 
  *  @param lp the (integer) linear program
+ *  @return 0 if minimization, 1 if maximization
  */
 int lp_get_direction( LinearProgram *lp );
 
@@ -219,24 +234,26 @@ void lp_set_rhs( LinearProgram *lp, int row, double rhs );
 
 /** @brief changes lower and upper bound of a column
  * 
- * @param lp problem object
+ * @param lp the (integer) linear program
  * @param col column index
  * @param lb lower bound
  * @param ub upper bound
  * */
 void lp_set_col_bounds( LinearProgram *lp, int col, const double lb, const double ub );
 
+
 /** @brief fixed a column to a value
  *
- * @param lp problem object
+ * @param lp the (integer) linear program
  * @param col column index
  * @param val value
  **/
 void lp_fix_col( LinearProgram *lp, int col, double val );
 
+
 /** @brief sets the type of some variables to integer
  *
- * @param lb problem object
+ * @param lp the (integer) linear program
  * @param nCols number of columns
  * @param cols vector with column indices
  */
@@ -244,16 +261,28 @@ void lp_set_integer( LinearProgram *lp, int nCols, int cols[] );
 
 
 /** @brief Saves the incumbent solution in for lp in fileName 
+ * @param lp the (integer) linear program
+ * @param fileName file name where the solution will be saved
  **/
 void lp_write_sol( LinearProgram *lp, const char *fileName );
 
-/** @brief Enters a initial feasible solution for the problem. Only the main decision variables need to be informed.
+
+/** @brief Enters a initial feasible solution for the problem. Variables are referenced by their names. Only the main decision variables need to be informed.
+ * @param lp the (integer) linear program
+ * @param count number of variables whose value will be informed
+ * @param colNames column names
+ * @param colValues column values
  **/
 void lp_load_mip_start(LinearProgram *lp, int count, const char **colNames, const double *colValues);
 
 /** @brief Enters a initial feasible solution for the problem using column indexes. Only the main decision variables need to be informed.
+ * @param lp the (integer) linear program
+ * @param count number of variables whose value will be informed
+ * @param colIndexes column indexes
+ * @param colValues column values
  */
 void lp_load_mip_starti( LinearProgram *lp, int count, const int *colIndexes, const double *colValues );
+
 
 /** @brief Loads from fileName an initial feasible solution.
  *
@@ -269,19 +298,26 @@ void lp_load_mip_starti( LinearProgram *lp, int count, const int *colIndexes, co
  * The first column (column index) is ignored. The first line is also ignored. Only column names (second column) and column values (third column) need to be informed
  * for non-zero variables.
  *
+ * @param lp the (integer) linear program
+ * @param fileName file name where the solution is stored
  **/
 int lp_read_mip_start( LinearProgram *lp, const char *fileName );
 
+
 /** @brief saves the solution entered as MIPStart
+ * @param lp the (integer) linear program
+ * @param fileName file name where the solution will be stored
  */
 void lp_save_mip_start( LinearProgram *lp, const char *fileName );
 
 /** @brief tries to discover the source of infeasibility in MIPStart
+ * @param lp the (integer) linear program
  */
 void lp_mipstart_debug( LinearProgram *lp );
 
-/** @brief For debugging purposes: fixes mipstart variables one by one and optimizes (if initial solution is invalid at 
- *some point an infeasible LP will appear) */
+/** @brief For debugging purposes: fixes mipstart variables one by one and optimizes (if initial solution is invalid at some point an infeasible LP will appear)
+ * @param lp the (integer) linear program
+ */
 void lp_fix_mipstart( LinearProgram *lp );
 
 
@@ -320,20 +356,35 @@ void lp_close_env();
  * ` 5 : LP_NO_SOL_FOUND` :  optimization concluded without finding any feasible solution <br>
  * ` 6 : LP_ERROR` : the solver reported an error <br>
  *
+ *  @param lp the (integer) linear program
  * */
 int lp_optimize( LinearProgram *lp );
 
+
 /** @brief optimizes only the linear programming relaxation of your MIP
  *
- * @param lp problem object
+ * Optimizes your Mixed Integer Program relaxing integrality constraints (if any). Returns the problem status, which can be:<br>
+ *
+ * ` 0 : LP_OPTIMAL` : optimal solution found <br>
+ * ` 1 : LP_INFEASIBLE` : the problem is infeasible <br>
+ * ` 2 : LP_UNBOUNDED` : the problem is unbounded <br>
+ * ` 3 : LP_FEASIBLE` : a feasible solution was found, but its optimality was not proved <br>
+ * ` 4 : LP_INTINFEASIBLE` : the lp relaxation is feasible but no integer feasible solution exists <br>
+ * ` 5 : LP_NO_SOL_FOUND` :  optimization concluded without finding any feasible solution <br>
+ * ` 6 : LP_ERROR` : the solver reported an error <br>
+ *
+ * @param lp the (integer) linear program
  **/
 int lp_optimize_as_continuous( LinearProgram *lp );
 
+
 /** @brief objective value of your optimization 
  * 
- * @param lp problem object
+ *  @param lp the (integer) linear program
+ *  @return objective value found
  * */
 double lp_obj_value(LinearProgram *lp);
+
 
 /** @brief returns the best dual bound found during the search
  *
@@ -341,42 +392,63 @@ double lp_obj_value(LinearProgram *lp);
  * retrieve the best dual bound (lower bound in minimization), which is a valid estimate of the 
  * best possible value for the optimal solution.
  *
- * @param lp problem object
+ *  @param lp the (integer) linear program
+ *  @return the dual bound (lower bound if minimization)
  * */
-double lp_best_bound(LinearProgram *lp); 
+double lp_best_bound( LinearProgram *lp ); 
 
 
 /** @brief returns the vector of solution values
  *
- * @param lp problem object
+ * @param lp the (integer) linear program
+ * @return solution vector
  * */
 double *lp_x( LinearProgram *lp );
 
 
 /*@ returns the slack vector for rows. Active (tight) rows have slack==0.0
  *
- * @param lp problem object
+ * @param lp the (integer) linear program
+ * @return row slack vector
  * */
 double *lp_row_slack( LinearProgram *lp );
 
 
 /*@brief returns a vector with the dual values, only available when solving continuous models
- *
- * @param lp problem object
+ * @param lp the (integer) linear program
+ * @return vector with row prices
  * */
 double *lp_row_price( LinearProgram *lp );
 
 
 /** @brief reduced cost for columns - only available when solving continous models 
- *
- * @param lp problem object
+ * @param lp the (integer) linear program
+ * @return vector with reduced costs
  * */
 double *lp_reduced_cost( LinearProgram *lp );
-/* multiple solutions (if available) */
-int lp_num_saved_sols( LinearProgram *lp );
-double lp_saved_sol_obj( LinearProgram *lp, int isol );
-double *lp_saved_sol_x( LinearProgram *lp, int isol );
 
+
+/** @brief number of solutions stored in the solution pool 
+ * @param lp the (integer) linear program
+ * @return number of solutions in the solution pool
+ * */
+int lp_num_saved_sols( LinearProgram *lp );
+
+
+/** @brief objective value for the isol-th solution of the solution pool 
+ * @param lp the (integer) linear program
+ * @param isol the solution index
+ * @return objective value of the i-th solution from the solution pool
+ * */
+double lp_saved_sol_obj( LinearProgram *lp, int isol );
+
+
+/** @brief objective value for the isol-th solution of the solution pool 
+ * @param lp the (integer) linear program
+ * @param isol the solution index
+ * @return solution vector of the i-th solution from the solution pool
+ */
+double *lp_saved_sol_x( LinearProgram *lp, int isol );
 
 
 /** @} */ // end of group1
@@ -432,31 +504,230 @@ void lp_set_rel_mip_gap( LinearProgram *lp, const double _value );
 /* parameters - parallel */
 void lp_set_parallel( LinearProgram *lp, char onOff );
 
+/** @defgroup groupQuery Query problem information
+ *  
+ *  Routines to query problem information
+ *  @{
+ */
 
-/* Model query */
+
+/** @brief checks if there are integer variables in this program
+ *  @param lp the (integer) linear program
+ *  @return 1 if there are integer variables, 0 otherwise
+ *  */
 char lp_is_mip( LinearProgram *lp );
+
+
+/** @brief checks if a given variable is integer or continuous
+ *  @param lp the (integer) linear program
+ *  @param j column index
+ *  @return 1 if variable is integer, 0 otherwise
+ *  */
 char lp_is_integer( LinearProgram *lp, const int j );
+
+
+/** @brief checks if a given variable is binary or not
+ *  @param lp the (integer) linear program
+ *  @param j column index
+ *  @return 1 if variable is integer, 0 otherwise
+ *  */
 char lp_is_binary( LinearProgram *lp, const int j );
+
+
+
+/** @brief counts the number of binary, general integer and continuous variables in this problem 
+ *  @param lp the (integer) linear program
+ *  @param binaries pointer to the integer that will be used to compute the number of binary variables
+ *  @param integer pointer to the integer that will be used to compute the number of general integer variables
+ *  @param continuous pointer to the integer that will be used to compute the number of continuous variables
+ * */
 void lp_cols_by_type( LinearProgram *lp, int *binaries, int *integers, int *continuous );
+
+
+
+/** @brief returns the numbef of columns (variables) in a given problem
+ *  @param lp the (integer) linear program
+ *  @return number of columns (variables)
+ * */
 int lp_cols( LinearProgram *lp );
+
+
+/** @brief returns the numbef of rows (linear constraints) in a given problem
+ *  @param lp the (integer) linear program
+ *  @return number of rows (linear constraints)
+ * */
 int lp_rows( LinearProgram *lp );
+
+
+/** @brief returns the numbef of non-zero coefficients in the linear program rows
+ *  @param lp the (integer) linear program
+ *  @return number of non-zero coefficients in the linear program rows
+ * */
 int lp_nz( LinearProgram *lp );
+
+
+/** @brief gets the contents of a given row (linear constraint)
+ *  @param lp the (integer) linear program
+ *  @param row row index
+ *  @param idx pointer to the vector of indexes that will be filled
+ *  @param idx pointer to the vector of coefficients that will be filled
+ *  @return number of non-zeros in row
+ *  */
 int lp_row( LinearProgram *lp, int row, int *idx, double *coef );
+
+
+/** @brief gets the contents of a given column (variable)
+ *  @param lp the (integer) linear program
+ *  @param col column index
+ *  @param pointer to the vector of row indexes that will be filled
+ *  @param pointer to the vector of row coefficients that will be filled
+ *  @return number of rows that column appears
+ */
 int lp_col( LinearProgram *lp, int col, int *idx, double *coef );
+
+
+/** @brief return the right hand side of a given row
+ *  @param lp the (integer) linear program
+ *  @return right hand side of row row
+ **/
 double lp_rhs( LinearProgram *lp, int row );
+
+
+/** @brief returns the sense of a given constraints
+ *
+ * Returns the sense of a given constraint:
+ *
+ * ` E : ` : equal (=) <br>
+ * ` G : ` : greater-or-equal (>=) <br>
+ * ` L : ` : less-or-equal (<=) <br>
+ *
+ *  @param lp the (integer) linear program
+ *  @param row row index
+ * */
 char lp_sense( LinearProgram *lp, int row );
+
+
+/** @brief queries a row name
+ *  @param lp the (integer) linear program
+ *  @param row row index
+ *  @param dest string where the row name will be saved
+ *  @return row name
+ **/
 char *lp_row_name( LinearProgram *lp, int row, char *dest );
+
+
+/** @brief queries a column name
+ *  @param lp the (integer) linear program
+ *  @param col column index
+ *  @param dest string where the column name will be saved
+ *  @return column name
+ **/
 char *lp_col_name( LinearProgram *lp, int col, char *dest );
+
+
+/** @brief queries a column lower bound
+ *  @param lp the (integer) linear program
+ *  @param col column index
+ *  @return column lower bound
+ *  */
 double lp_col_lb( LinearProgram *lp, int col );
+
+
+/** @brief queries a column upper bound
+ *  @param lp the (integer) linear program
+ *  @param col column index
+ *  @return column upper bound
+ *  */
 double lp_col_ub( LinearProgram *lp, int col );
-// returns the index of a variable or -1 if name not found
+
+
+/** @brief returns the column (variable) index of a given column name
+ *  @param lp the (integer) linear program
+ *  @param name column name
+ *  @return column index
+ *  */
 int lp_col_index( LinearProgram *lp, const char *name );
-// returns the index of a constraint or -1 if name not found
+
+
+/** @brief returns the row (linear constraint) index of a given row name
+ *  @param lp the (integer) linear program
+ *  @param name row name
+ *  @return row index
+ *  */
 int lp_row_index( LinearProgram *lp, const char *name );
+
+
+/** @brief return the vector with objective coefficients
+ *  @param lp the (integer) linear program
+ *  @return vector with objective coefficients
+ **/
 const double *lp_obj_coef( LinearProgram *lp );
+
+#define CONS_PARTITIONING  0
+#define CONS_PACKING       1
+#define CONS_COVERING      2
+#define CONS_CARDINALITY   3
+#define CONS_KNAPSACK      4
+#define CONS_INV_KNAPSACK  5
+#define CONS_FLOW_BIN      6
+#define CONS_FLOW_INT      7
+#define CONS_FLOW_MX       8
+#define CONS_VBOUND        9
+#define CONS_OTHER        10
+#define CONS_NUMBER       11 /* number of types */
+
+
+/** @brief returns the constraint type of a given row
+ *
+ * Returns the constraint type:<br>
+ *
+ * ` 0 : CONS_PARTITIONING` : set partitioning constraint <br>
+ * ` 1 : CONS_PACKING` : set packing constraint <br>
+ * ` 2 : CONS_COVERING` : set covering constraints <br>
+ * ` 3 : CONS_CARDINALITY` : cardinality constraint <br>
+ * ` 4 : CONS_KNAPSACK` : knapsack constraint <br>
+ * ` 5 : CONS_INV_KNAPSACK` :  invariant knapsack constraint <br>
+ * ` 6 : CONS_FLOW_BIN` : flow constraint with binary variables <br>
+ * ` 7 : CONS_FLOW_INT` : flow constraint with general integer variables <br>
+ * ` 8 : CONS_FLOW_MX` : flow constraint continuous and or integer variables <br>
+ * ` 9 : CONS_VBOUND` : variable bound constraint <br>
+ *
+ *  @param lp the (integer) linear program
+ *  @param row row index
+ *  @return constraint type
+ * */
 int lp_row_type( LinearProgram *lp, const int row );
+
+
+/** @brief fills the constraint types vector
+ *
+ * Fills a constraint type vector:<br>
+ *
+ * ` 0 : CONS_PARTITIONING` : set partitioning constraint <br>
+ * ` 1 : CONS_PACKING` : set packing constraint <br>
+ * ` 2 : CONS_COVERING` : set covering constraints <br>
+ * ` 3 : CONS_CARDINALITY` : cardinality constraint <br>
+ * ` 4 : CONS_KNAPSACK` : knapsack constraint <br>
+ * ` 5 : CONS_INV_KNAPSACK` :  invariant knapsack constraint <br>
+ * ` 6 : CONS_FLOW_BIN` : flow constraint with binary variables <br>
+ * ` 7 : CONS_FLOW_INT` : flow constraint with general integer variables <br>
+ * ` 8 : CONS_FLOW_MX` : flow constraint continuous and or integer variables <br>
+ * ` 9 : CONS_VBOUND` : variable bound constraint <br>
+ *
+ *  @param lp the (integer) linear program
+ *  @param rtype vector where constraint types will be filled
+ * */
 void lp_rows_by_type( LinearProgram *lp, int rtype[] );
+
+
+/** @brief if this is a pre-processed problem, returns indexes of respective original columns
+ *  @param lp the (integer) linear program
+ *  @return vector with indexes of respective original columns
+ **/
 int *lp_original_colummns( LinearProgram *lp );
+
+
+/** @} */ // end of group1
 
 /* callback function prototype */
 typedef int (*lp_cb)( LinearProgram *lp, int whereFrom, const int *origCols, LinearProgram *origLP, void *data );

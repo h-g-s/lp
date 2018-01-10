@@ -965,7 +965,7 @@ void lp_add_row(LinearProgram *lp, const int nz,  int *indexes, double *coefs, c
 }
 
 
-void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *coef, char *sense, double *rhs, const char **name )
+void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *coef, char *sense, double *rhs, const char **names )
 {
 #ifdef NEED_OWN_INDEX
     int nrbeg = lp_rows( lp );
@@ -1017,9 +1017,9 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
 
     lp->osiLP->addRows( nRows, starts, idx, coef, rlb, rub );
 
-    if (name)
-        for ( int i=0 ; (nRows) ; ++i )
-            lp->osiLP->setRowName( rt+i, string(name[i]) );
+    if (names)
+        for ( int i=0 ; (i<nRows) ; ++i )
+            lp->osiLP->setRowName( rt+i, string(names[i]) );
 
     delete[] rlb;
 #endif
@@ -1028,7 +1028,7 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
     for ( int i=0 ; i<nRows ; ++i )
         nz += starts[i+1]-starts[i];
     
-    int grbError = GRBaddconstrs( lp->lp, nRows, nz, starts, idx, coef, sense, rhs, name );
+    int grbError = GRBaddconstrs( lp->lp, nRows, nz, starts, idx, coef, sense, rhs, ((char **)names) );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
 #endif
 #ifdef CPX
@@ -1036,13 +1036,13 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
     for ( int i=0 ; i<nRows ; ++i )
         nz += starts[i+1]-starts[i];
      
-    int cpxError = CPXaddrows( LPcpxDefaultEnv, lp->cpxLP, 0, newRows, nz, rhs, sense, start, idx, coef, NULL, name );
+    int cpxError = CPXaddrows( LPcpxDefaultEnv, lp->cpxLP, 0, nRows, nz, rhs, sense, starts, idx, coef, NULL, (char **)names );
     lp_check_for_cpx_error( LPcpxDefaultEnv, cpxError, __FILE__, __LINE__ );
 #endif
 #ifdef GLPK
     int r = lp_rows( lp );
 
-    glp_add_rows( nRows );
+    glp_add_rows( lp->_lp, nRows );
 
     for ( int i=0 ; (i<nRows) ; ++i )
     {
@@ -1052,7 +1052,7 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
                 glp_set_row_bnds( lp->_lp, r+i+1, GLP_FX, rhs[i], rhs[i] );
                 break;
             case 'L':
-                glp_set_row_bnds( lp->_lp, r+i+1, GLP_UB, -DBL_MAX, rhs[i] );
+                glp_set_row_bnds( lp->_lp, r+i+1, GLP_UP, -DBL_MAX, rhs[i] );
                 break;
             case 'G':
                 glp_set_row_bnds( lp->_lp, r+i+1, GLP_LO, rhs[i], DBL_MAX );
@@ -1062,23 +1062,26 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
                 abort();
         }
 
-        const int *idxr = idx + starts[i];
+        int *idxr = idx + starts[i];
         const double *coefr = coef + starts[i];
         int nzr = starts[i+1]-starts[i];
         for ( int j=0 ; (j<nzr) ; ++j )
             ++idxr[j];
 
-        glp_set_mat_row( lp->_lp, r+i+1, nrz, idxr-1, coefr-1 );
+        glp_set_mat_row( lp->_lp, r+i+1, nzr, idxr-1, coefr-1 );
+        
+        if (names)
+            glp_set_row_name( lp->_lp, r+i+1, names[i] );
 
         for ( int j=0 ; (j<nzr) ; ++j )
             --idxr[j];
     }
 #endif
 #ifdef NEED_OWN_INDEX
-    if (name)
+    if (names)
     {
-        for ( int i=0 ; (nRows) ; ++i )
-            (*lp->rowNameIdx)[string(name[i])] = nrbeg+i;
+        for ( int i=0 ; (i<nRows) ; ++i )
+            (*lp->rowNameIdx)[string(names[i])] = nrbeg+i;
     }
 #endif
 }
@@ -1732,6 +1735,31 @@ int lp_optimize(LinearProgram *lp)
 GLPK_GET_MIP_SOLUTION:
             for (int i = 0 ; (i < lp_cols(lp)) ; ++i)
                 lp->_x->at(i) = glp_mip_col_val(lp->_lp, i + 1);
+
+            /* slacks */
+            for ( int i=0 ; i<lp_rows(lp) ; ++i )
+            {
+                const double rval = glp_mip_row_val( lp->_lp, i+1 );
+                const double rhs = lp_rhs(lp,i);
+                double slack = 0.0;
+
+
+                switch (lp_sense(lp,i))
+                {
+                    case 'E' :
+                        assert( fabs(rhs-rval)<1e-6 );
+                        break;
+                    case 'L' :
+                        slack = rhs - rval;
+                        assert( slack >= -1e-6 );
+                        break;
+                    case 'G' :
+                        slack = rval-rhs;
+                        break;
+                }
+                assert( slack >= -1e-6 );
+                (*lp->_slack)[i] = slack;
+            }
 
             lp->obj = glp_mip_obj_val(lp->_lp);
             goto OPTIMIZATION_CONCLUDED;
@@ -2761,7 +2789,7 @@ int lp_row(LinearProgram *lp, int row, int *idx, double *coef)
 #ifdef GLPK
     result = glp_get_mat_row(lp->_lp, row + 1, idx - 1, coef - 1);
     for (int i = 0 ; (i<result) ; ++i)
-        idx[i]--;
+        --idx[i];
 #endif
 
     return result;
@@ -3592,9 +3620,9 @@ LinearProgram *lp_clone(LinearProgram *lp)
     }
 
 #ifdef GRB
-    reslut->tmpRows = lp->tmpRows;
-    reslut->tmpCols = lp->tmpCols;
-    reslut->nModelChanges = lp->nModelChanges;
+    result->tmpRows = lp->tmpRows;
+    result->tmpCols = lp->tmpCols;
+    result->nModelChanges = lp->nModelChanges;
 #endif
 
     return result;

@@ -5,14 +5,14 @@ LP is a simple and lightweight solver-independent C/C++ wraper to
 Mixed-Integer Programming (MIP) solvers. It currently supports COIN-OR
 CBC, GLPK, CPLEX and GUROBI. It can be called from any C 89 (or higher)
 compatible compiler. I created LP because as someone used to the C based
-CPLEX callable libeary, I was frustrated with the complex object oriented
-framework that one had to master to successfully use the COIN-OR CBC
-integer optimizer (OSI, CGL, CBC...).
+CPLEX callable library, I was frustrated with the relatively large object
+oriented framework that one had to know to successfully use the COIN-OR
+CBC integer optimizer (OSI, CGL, CBC...).
 
 Besides the standard
-[Creation/Modification](group__groupCreateMod.html) and
-[Optimization](group__groupOpt.html) routines LP provices access to
-some ufesull features to Optimize Mixed Integer Programs: 
+[Creation/Modification](group__group_create_mod.html), [Problem
+Query](query.html) and [Optimization](group__group_opt.html) routines LP
+provides access to some usefull features to Mixed Integer Optimizers:
 
 - Handling of solution pool
 - MIPStart (entering an initial feasible solution)
