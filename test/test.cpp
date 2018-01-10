@@ -11,6 +11,26 @@ extern "C"
 
 #define EPS 1e-5
 
+void lp_check_name_index_consistency( LinearProgram *lp )
+{
+    for ( int i=0 ; (i<lp_cols(lp)) ; ++i )
+    {
+        char name[256] = "";
+        lp_col_name( lp, i, name );
+
+        assert( lp_col_index( lp, name ) == i );
+    }
+
+    for ( int i=0 ; (i<lp_rows(lp)) ; ++i )
+    {
+        char name[256] = "";
+        lp_row_name( lp, i, name );
+
+        assert( lp_row_index( lp, name ) == i );
+    }
+
+}
+
 int main(int argc, const char *argv[])
 {
    LinearProgram *lp = lp_create();
@@ -73,6 +93,7 @@ int main(int argc, const char *argv[])
        assert( lp_sense(lp,3)=='L' );
    }
     
+   lp_check_name_index_consistency( lp );
    int status = lp_optimize( lp );
 
    switch (status) 
@@ -120,6 +141,7 @@ int main(int argc, const char *argv[])
    printf("Obj value: %g\n", lp_obj_value(lp) );
    assert( fabs(-6.01047-lp_obj_value(lp))<EPS );
 
+   lp_check_name_index_consistency( lp );
    status = lp_optimize( lp );
    switch (status) 
    {
@@ -135,6 +157,7 @@ int main(int argc, const char *argv[])
    lp_set_col_bounds( lp, 1, 2.0, 3.0 );
 
    lp_write_lp( lp, "b.lp" );
+   lp_check_name_index_consistency( lp );
    status = lp_optimize( lp );
    switch (status) 
    {
@@ -174,6 +197,7 @@ int main(int argc, const char *argv[])
 
        lp_add_row( lp, nz, oidx, ocoef, "objcut", 'G', -2.0 );
 
+       lp_check_name_index_consistency( lp );
        status  = lp_optimize( lp  );
 
        assert( status == LP_OPTIMAL );
@@ -197,6 +221,7 @@ int main(int argc, const char *argv[])
 
        lp_write_lp( lp, "d.lp" );
 
+       lp_check_name_index_consistency( lp );
        status = lp_optimize( lp );
 
        assert( fabs(lp_obj_value(lp) + 1.0)<1e-10 );
@@ -207,6 +232,7 @@ int main(int argc, const char *argv[])
 
        lp_remove_rows( lp, nrr, rr );
 
+       lp_check_name_index_consistency( lp );
        status = lp_optimize( lp );
 
        assert( fabs(lp_obj_value(lp) + 4.0)<1e-10 );
@@ -230,6 +256,7 @@ int main(int argc, const char *argv[])
    lp_set_heur_proximity( lp, 0 );
    lp_set_max_saved_sols( lp, 50 );
    lp_set_print_messages( lp, 1 );
+   lp_check_name_index_consistency( lp );
    lp_optimize( lp );
    /*
    printf("%d solutions were found.\n", lp_num_saved_sols(lp) );
@@ -263,6 +290,8 @@ int main(int argc, const char *argv[])
    lp_free( &lpp ); */
 
    printf("test completed with success.\n");
+
+   lp_close_env();
    
    return 0;
 }

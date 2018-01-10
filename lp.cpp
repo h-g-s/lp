@@ -4848,10 +4848,15 @@ void lp_remove_rows( LinearProgram *lp, int nRows, int *rows )
 
 #ifdef NEED_OWN_INDEX
     // updating index of all columns after removed columns
-    for ( map< string, int >::iterator it=(*lp->rowNameIdx).begin() ; it!=(*lp->rowNameIdx).end() ; ++it )
-        for ( int ir=0 ; (ir<nRows) ; ++ir )
-            if (it->second>=rows[ir])
-                --it->second;
+    {
+        int minR = INT_MAX;
+        for ( int i=0 ; (i<nRows) ; ++i )
+            minR = std::min( rows[i], minR );
+
+        char rowName[256];
+        for ( int i=minR ; i<lp_rows(lp) ; ++i )
+            (*lp->rowNameIdx)[lp_row_name(lp, i, rowName)] = i;
+    }
 #endif
 }
 
