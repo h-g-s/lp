@@ -663,19 +663,6 @@ int lp_row_index( LinearProgram *lp, const char *name );
  **/
 const double *lp_obj_coef( LinearProgram *lp );
 
-#define CONS_PARTITIONING  0
-#define CONS_PACKING       1
-#define CONS_COVERING      2
-#define CONS_CARDINALITY   3
-#define CONS_KNAPSACK      4
-#define CONS_INV_KNAPSACK  5
-#define CONS_FLOW_BIN      6
-#define CONS_FLOW_INT      7
-#define CONS_FLOW_MX       8
-#define CONS_VBOUND        9
-#define CONS_OTHER        10
-#define CONS_NUMBER       11 /* number of types */
-
 
 /** @brief returns the constraint type of a given row
  *
