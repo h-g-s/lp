@@ -406,7 +406,7 @@ double lp_best_bound( LinearProgram *lp );
 double *lp_x( LinearProgram *lp );
 
 
-/*@ returns the slack vector for rows. Active (tight) rows have slack==0.0
+/** @brief returns the slack vector for rows. Active (tight) rows have slack==0.0
  *
  * @param lp the (integer) linear program
  * @return row slack vector
@@ -414,7 +414,7 @@ double *lp_x( LinearProgram *lp );
 double *lp_row_slack( LinearProgram *lp );
 
 
-/*@brief returns a vector with the dual values, only available when solving continuous models
+/** @brief returns a vector with the dual values, only available when solving continuous models
  * @param lp the (integer) linear program
  * @return vector with row prices
  * */

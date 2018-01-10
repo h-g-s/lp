@@ -11,8 +11,8 @@ successfully use all the features in the COIN-OR CBC integer optimizer
 (OSI, CGL, CBC...).
 
 Besides the standard
-[Creation/Modification](group__group_create_mod.html), [Problem
-Query](group__group_query.html) and [Optimization](group__group_opt.html)
+[Creation/Modification](http://www.decom.ufop.br/haroldo/software/lp/group__group_create_mod.html), [Problem
+Query](http://www.decom.ufop.br/haroldo/software/lp/group__group_query.html) and [Optimization](http://www.decom.ufop.br/haroldo/software/lp/group__group_opt.html)
 routines LP provides access to some usefull features to Mixed Integer
 Optimizers:
 
