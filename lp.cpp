@@ -3533,8 +3533,6 @@ LinearProgram *lp_clone(LinearProgram *lp)
 
     LinearProgram *result = lp_create_from( lp );
 
-    lp_initialize(result);
-
     result->optAsContinuous = lp->optAsContinuous;
     result->allInteger = lp->allInteger;
     result->nOptimizations = lp->nOptimizations;
