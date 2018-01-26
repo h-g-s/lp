@@ -1456,7 +1456,9 @@ char lp_is_integer(LinearProgram *lp, const int j)
 
 char lp_isMIP(LinearProgram *lp)
 {
+#ifdef GRB
     flush_model_updates( lp );
+#endif
 
     int nCols = lp_cols(lp);
     int j;
