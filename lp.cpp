@@ -37,6 +37,10 @@ extern "C" {
 
 #define FILE_NAME_SIZE 1024
 
+#ifdef GRB
+void flush_model_updates( LinearProgram *lp );
+#endif
+
 #define ERROR( msg ) \
     fprintf( stderr, msg ); \
     abort(); \
@@ -212,8 +216,6 @@ struct _LinearProgram {
 #endif // CPX
 #ifdef GRB
     GRBmodel* lp;
-    int tmpRows; // rows not flushed yet
-    int tmpCols; // rows not flushed yet
     int nModelChanges;
 #endif
 };
@@ -504,8 +506,6 @@ LinearProgramPtr lp_create_from( LinearProgram *lp )
         }
     }
 
-    result->tmpRows = 0;
-    result->tmpCols = 0;
     result->nModelChanges = 0;
 #endif
 
@@ -618,14 +618,7 @@ void lp_write_lp(LinearProgram *lp, const char *fileName)
     return;
 #endif
 #ifdef GRB
-    if (lp->tmpRows>0)
-    {
-        int grbError;
-        grbError = GRBupdatemodel(lp->lp);
-        lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
-
-        lp->tmpRows = 0;
-    }
+    flush_model_updates( lp );
 
     char fName[256];
     strcpy( fName, fileName );
@@ -785,12 +778,7 @@ static void lp_validate_row_data(LinearProgram *lp, const int nz,  int *indexes,
             if ( indexes[i]==indexes[j] )
             {
 #ifdef GRB
-                if ( lp->tmpCols || lp->tmpRows || lp->nModelChanges )
-                {
-                    int grbError = GRBupdatemodel( lp->lp );
-                    lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
-                    lp->tmpCols = lp->tmpRows = lp->nModelChanges = 0;
-                }
+                flush_model_updates( lp );
 #endif
                 char varName[256];
                 lp_col_name( lp, indexes[i], varName );
@@ -904,7 +892,7 @@ void lp_add_row(LinearProgram *lp, const int nz,  int *indexes, double *coefs, c
             break;
     }
 
-    lp->tmpRows++;
+    lp->nModelChanges++;
 
     int grbError = GRBaddconstr( lp->lp, nz, indexes, coefs, sense, rhs, name );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
@@ -1030,6 +1018,8 @@ void lp_add_rows( LinearProgram *lp, int nRows, int *starts, int *idx, double *c
     
     int grbError = GRBaddconstrs( lp->lp, nRows, nz, starts, idx, coef, sense, rhs, ((char **)names) );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
+
+    lp->nModelChanges++;
 #endif
 #ifdef CPX
     int nz = 0;
@@ -1353,6 +1343,8 @@ const double *lp_obj_coef( LinearProgram *lp )
     return &((*lp->_obj)[0]);
 #endif
 #ifdef GRB
+    flush_model_updates( lp );
+
     lp->_obj->resize( lp_cols(lp) );
     double *obj = &((*lp->_obj)[0]);
     int grbError = GRBgetdblattrarray( lp->lp, GRB_DBL_ATTR_OBJ, 0, lp_cols(lp) , obj );
@@ -1375,6 +1367,8 @@ int lp_cols(LinearProgram *lp)
     return lp->osiLP->getNumCols();
 #endif
 #ifdef GRB
+    flush_model_updates( lp );
+
     int numCols = INT_MAX;
     int grbError = GRBgetintattr(lp->lp, GRB_INT_ATTR_NUMVARS, &numCols);
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
@@ -1397,11 +1391,13 @@ int lp_rows(LinearProgram *lp)
     return lp->osiLP->getNumRows();
 #endif
 #ifdef GRB
+    flush_model_updates( lp );
+
     int numRows = INT_MAX;
     int grbError = GRBgetintattr(lp->lp, GRB_INT_ATTR_NUMCONSTRS, &numRows);
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
 
-    return numRows + lp->tmpRows;
+    return numRows;
 #endif
 #ifdef CPX
     return CPXgetnumrows(LPcpxDefaultEnv, lp->cpxLP);
@@ -1438,6 +1434,8 @@ char lp_is_integer(LinearProgram *lp, const int j)
     return ((colType[0] == CPX_BINARY) || (colType[0] == CPX_INTEGER));
 #endif
 #ifdef GRB
+    flush_model_updates( lp );
+
     char vType = 0;
     int grbError = GRBgetcharattrelement( lp->lp, GRB_CHAR_ATTR_VTYPE, j, &vType );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
@@ -1458,6 +1456,8 @@ char lp_is_integer(LinearProgram *lp, const int j)
 
 char lp_isMIP(LinearProgram *lp)
 {
+    flush_model_updates( lp );
+
     int nCols = lp_cols(lp);
     int j;
 
@@ -1497,16 +1497,7 @@ int lp_optimize(LinearProgram *lp)
     lp_check_mipstart( lp );
 
 #ifdef GRB
-    if ( (lp->tmpRows>0) || (lp->tmpCols>0) || (lp->nModelChanges) )
-    {
-        int grbError;
-        grbError = GRBupdatemodel(lp->lp);
-        lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
-
-        lp->tmpRows = 0;
-        lp->tmpCols = 0;
-        lp->nModelChanges = 0;
-    }
+    flush_model_updates( lp );
 #endif
 
     int isMIP = 0;
@@ -2741,6 +2732,8 @@ int lp_col( LinearProgram *lp, int col, int *idx, double *coef )
     result = nzCol;
 #endif
 #ifdef GRB
+    flush_model_updates( lp );
+
     int nz = 0;
     int beg[2];
     int grbError = GRBgetvars( lp->lp, &nz, beg,  idx, coef, col, 1 );
@@ -2759,6 +2752,8 @@ int lp_row(LinearProgram *lp, int row, int *idx, double *coef)
     int result = -INT_MAX;
 
 #ifdef GRB
+    flush_model_updates( lp );
+
     int nz = 0;
     int beg[2];
     int grbError = GRBgetconstrs( lp->lp, &nz, beg,  idx, coef, row, 1 );
@@ -2801,6 +2796,8 @@ double lp_rhs(LinearProgram *lp, int row)
     LP_CHECK_ROW_INDEX( lp, row );
 
 #ifdef GRB
+    flush_model_updates( lp );
+
     double rhs;
     int grbError = GRBgetdblattrelement( lp->lp, "RHS", row,  &rhs );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
@@ -2841,6 +2838,8 @@ char lp_sense(LinearProgram *lp, int row)
     LP_CHECK_ROW_INDEX( lp, row );
 
 #ifdef GRB
+    flush_model_updates( lp );
+
     char sense;
     int grbError = GRBgetcharattrelement( lp->lp, "Sense", row, &sense );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
@@ -2896,12 +2895,7 @@ char *lp_row_name(LinearProgram *lp, int row, char *dest)
     assert(dest);
 
 #ifdef GRB
-    if ( lp->tmpCols || lp->tmpRows || lp->nModelChanges )
-    {
-        int grbError = GRBupdatemodel( lp->lp );
-        lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
-        lp->tmpCols = lp->tmpRows = lp->nModelChanges = 0;
-    }
+    flush_model_updates( lp );
 
     char *name;
     int grbError = 
@@ -2932,6 +2926,8 @@ char *lp_col_name(LinearProgram *lp, int col, char *dest)
     assert(dest);
 
 #ifdef GRB
+    flush_model_updates( lp );
+
     char *name;
     int grbError = 
         GRBgetstrattrelement( lp->lp, GRB_STR_ATTR_VARNAME, col, &name);
@@ -2962,6 +2958,8 @@ double lp_col_lb(LinearProgram *lp, int col)
     LP_CHECK_COL_INDEX(lp, col);
 
 #ifdef GRB
+    flush_model_updates( lp );
+
     double lb;
     int grbError = GRBgetdblattrelement( lp->lp, GRB_DBL_ATTR_LB, col, &lb );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
@@ -2992,6 +2990,8 @@ double lp_col_ub(LinearProgram *lp, int col)
     LP_CHECK_COL_INDEX(lp, col);
 
 #ifdef GRB
+    flush_model_updates( lp );
+
     double ub;
     int grbError = GRBgetdblattrelement( lp->lp, GRB_DBL_ATTR_UB, col, &ub );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
@@ -3063,7 +3063,8 @@ void lp_add_col(LinearProgram *lp, double obj, double lb, double ub, char intege
 
     int grbError = GRBaddvar( lp->lp, nz, rowIdx, rowCoef, obj, lb, ub, vType, name );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
-    lp->tmpCols++;
+
+    lp->nModelChanges++;
 #endif
 #ifdef CPX
     char type = CPX_CONTINUOUS;
@@ -3618,8 +3619,6 @@ LinearProgram *lp_clone(LinearProgram *lp)
     }
 
 #ifdef GRB
-    result->tmpRows = lp->tmpRows;
-    result->tmpCols = lp->tmpCols;
     result->nModelChanges = lp->nModelChanges;
 #endif
 
@@ -3740,6 +3739,10 @@ void lp_initialize(LinearProgram *lp)
     lp->maxSolutions  = INT_NOT_SET;
     lp->mipEmphasis   = LP_ME_DEFAULT;
     lp->parallel      = INT_NOT_SET;
+
+#ifdef GRB
+    lp->nModelChanges = 0;
+#endif
 }
 
 int lp_col_index(LinearProgram *lp, const char *name)
@@ -3755,13 +3758,7 @@ int lp_col_index(LinearProgram *lp, const char *name)
     return mIt->second;
 #else
 #ifdef GRB
-    if (lp->tmpCols)
-    {
-        int grbError = GRBupdatemodel(lp->lp);
-        lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
-        lp->tmpRows = lp->tmpCols = lp->nModelChanges = 0;
-    }
-
+    flush_model_updates( lp );
 
     int index = -1;
     int grbError = GRBgetvarbyname( lp->lp, name, &index );
@@ -3794,13 +3791,7 @@ int lp_row_index(LinearProgram *lp, const char *name)
     return mIt->second;
 #else
 #ifdef GRB
-    /*
-       if (lp->tmpRows)
-       {
-       int grbError = GRBupdatemodel(lp->lp);
-       lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
-       lp->tmpRows = lp->tmpCols = lp->nModelChanges = 0;
-       } */
+    flush_model_updates( lp );
 
     int index = -1;
     int grbError = GRBgetconstrbyname( lp->lp, name, &index );
@@ -4257,6 +4248,9 @@ void lp_load_mip_starti( LinearProgram *lp, int count, const int *colIndexes, co
         lp->msVal[i] = colValues[i];
         lp->msNames[i+1] = lp->msNames[i]+strlen(lp->msNames[i])+1;
     }
+#ifdef GRB
+    lp->nModelChanges++;
+#endif
 }
 
 void lp_load_mip_start(LinearProgram *lp, int count, const char **colNames, const double *colValues)
@@ -4285,6 +4279,9 @@ void lp_load_mip_start(LinearProgram *lp, int count, const char **colNames, cons
         lp->msNames[i+1] = lp->msNames[i]+strlen(lp->msNames[i])+1;
         lp->msVal[i] = colValues[i];
     }
+#ifdef GRB
+    lp->nModelChanges++;
+#endif
 }
 
 void lp_chg_obj(LinearProgram *lp, int count, int idx[], double obj[])
@@ -4292,6 +4289,8 @@ void lp_chg_obj(LinearProgram *lp, int count, int idx[], double obj[])
 #ifdef GRB
     int grbError = GRBsetdblattrlist( lp->lp, "Obj", count, idx, obj );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
+
+    lp->nModelChanges++;
 #endif
 #ifdef CPX
     int cpxError = CPXchgobj(LPcpxDefaultEnv, lp->cpxLP, count, idx, obj);
@@ -4316,6 +4315,8 @@ int lp_nz(LinearProgram *lp)
     return glp_get_num_nz( lp->_lp );
 #endif
 #ifdef GRB
+    flush_model_updates( lp );
+
     int nzs = 0;
     int grbError = GRBgetintattr( lp->lp, "NumNZs", &nzs );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
@@ -4622,6 +4623,8 @@ void lp_set_integer( LinearProgram *lp, int nCols, int cols[] )
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
 
     delete[] vType;
+
+    lp->nModelChanges++;
 #endif
 }
 
@@ -4826,6 +4829,8 @@ void lp_remove_rows( LinearProgram *lp, int nRows, int *rows )
     int grbError =
         GRBdelconstrs( lp->lp, nRows, rows );
     lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
+
+    lp->nModelChanges++;
 #endif
 #ifdef CPX
     int *rset = (int*) calloc( sizeof(int), lp_rows(lp) );
@@ -4906,3 +4911,16 @@ void lp_fix_mipstart( LinearProgram *lp )
     printf("%d MIPStart variables fixed.\n", lp->msVars );      
 }
 
+#ifdef GRB
+void flush_model_updates( LinearProgram *lp )
+{
+    if (lp->nModelChanges)
+    {
+        int grbError;
+        grbError = GRBupdatemodel(lp->lp);
+        lp_check_for_grb_error( LPgrbDefaultEnv, grbError, __FILE__, __LINE__ );
+
+        lp->nModelChanges = 0;
+    }
+}
+#endif
