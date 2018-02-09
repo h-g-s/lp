@@ -160,7 +160,7 @@ void lp_add_row( LinearProgram *lp, const int nz, int *indexes, double *coefs, c
 * Adds new rows (linear constraints) to the problem in lp
 * @param lp the (integer) linear program
 * @param nRows number of rows
-* @param vector indicating where each row i starts starts[i] and ends (starts[i]+1) in idx and coef
+* @param vector indicating where each row i starts starts[i] and ends (starts[i+1]) in idx and coef
 * @param idx column indexes 
 * @param coef column coefficients
 * @param sense E for equal, L for less-or-equal or G for greter-or-equal
