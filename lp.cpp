@@ -612,7 +612,11 @@ void lp_write_lp(LinearProgram *lp, const char *fileName)
     strcpy( fName, fileName );
     if ( (!strstr(fName,".lp")) && (!strstr(fName,".LP")) )
         strcat( fName, ".lp" );
-    cpxError = CPXwriteprob(LPcpxDefaultEnv, lp->cpxLP, fName, "LP");
+
+    char format[64] = "LP";
+    if (getFileType(fileName)=='M')
+        strcpy( format, "MPS" );
+    cpxError = CPXwriteprob(LPcpxDefaultEnv, lp->cpxLP, fName, "MPS");
     lp_check_for_cpx_error(LPcpxDefaultEnv, cpxError, __FILE__, __LINE__);
 
     return;
@@ -657,7 +661,16 @@ void lp_write_lp(LinearProgram *lp, const char *fileName)
             glp_write_mps(lp->_lp, GLP_MPS_FILE, NULL, fileName);
 #endif
 #ifdef CBC
-            lp->osiLP->writeMps(fileName);
+            {
+                char outFile[256];
+                strcpy(outFile, fileName);
+                char *s = NULL;
+                if ((s = strstr(outFile, ".mps"))) {
+                    if (s != outFile) // not at the start
+                        *s = '\0';
+                }
+                lp->osiLP->writeMps(outFile);
+            }
 #endif
 
             break;
