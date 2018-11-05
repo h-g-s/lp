@@ -1822,7 +1822,10 @@ GLPK_GET_MIP_SOLUTION:
             if (lp->nOptimizations >= 2)
                 linearProgram->resolve();
             else
+            {
+                /* solving initial lp relaxation */
                 linearProgram->initialSolve();
+            }
         }
 
         if (linearProgram->isAbandoned()) {
