@@ -138,7 +138,7 @@ class LinearProgram:
 		elif sense == Sense.GREATER_OR_EQUAL:
 			chars = ctypes.c_char(ord('G'))
 		elif sense == Sense.LESS_OR_EQUAL:
-			chars = ctypes.c_char(ord('E'))
+			chars = ctypes.c_char(ord('L'))
 		else:
 			raise 'sense not recognized: {}'.format(sense)
 
@@ -176,6 +176,16 @@ class LinearProgram:
 
 	def obj_value(self) -> float:
 		return lp_obj_value(self._plp)
+
+
+	def x(self) -> List[float] :
+		n = self.cols()
+		res = [0.0]*n
+		pr = lp_x(self._plp)
+		for i in range(0,n):
+			res[i] = pr[i]
+
+		return res
 
 
 	def __del__(self):
@@ -233,6 +243,11 @@ lp_add_row.argtypes = [
 	ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(ctypes.c_int),
 	ctypes.POINTER(ctypes.c_double), ctypes.c_char_p, ctypes.c_char, 
 	ctypes.c_double ]
+
+
+lp_x = lplib.lp_x
+lp_x.argtypes = [ctypes.c_void_p]
+lp_x.restype = ctypes.POINTER(ctypes.c_double)
 
 
 lp_free = lplib.lp_free
