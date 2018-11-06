@@ -1,5 +1,4 @@
 import ctypes
-from numpy.ctypeslib import ndpointer
 from enum import Enum
 from typing import List
 
@@ -11,6 +10,11 @@ class OptimizationStatus(Enum):
 	IntInfeasible   = 4
 	NoSolutionFound = 5
 	Error           = 6
+
+class Sense(Enum):
+	LESS_OR_EQUAL    = 'L'
+	GREATER_OR_EQUAL = 'G'
+	EQUAL            = 'E'
 
 class LinearProgram:
 	""" low level class to create, modify and 
@@ -29,6 +33,10 @@ class LinearProgram:
 		lp_read( self._plp, fileName.encode('utf-8'))
 
 	
+	def write(self, fileName : str):
+		lp_write( self._plp, fileName.encode('utf-8'))
+
+
 	def add_col(self,
 			obj      : float,      # objective function coefficient
 			lb       : float,      # variable lower bound
@@ -41,7 +49,6 @@ class LinearProgram:
 			):
 		""" adds a new column (variable)
 		"""
-		charInt : ctypes.c_char
 		if integer:
 			charInt = ctypes.c_char(1)
 		else:
@@ -62,11 +69,87 @@ class LinearProgram:
 			charInt, name.encode('utf-8'),
 			ctypes.c_int(len(rowIdx)), vrowInt, vrowCoef )
 
+	def add_cols(self, 
+		n : int, 
+		obj : List[float],
+		lb : List[float],
+		ub : List[float],
+		integer : List[bool],
+		name : List[str] ):
+
+		vobj = (ctypes.c_double*n)()
+		vlb = (ctypes.c_double*n)()
+		vub = (ctypes.c_double*n)()
+		vint = (ctypes.c_char*n)()
+
+		for i in range(n):
+			vobj[i] = obj[i]
+
+		for i in range(n):
+			vlb[i] = lb[i]
+
+		for i in range(n):
+			vub[i] = ub[i]
+
+		for i in range(n):
+			vint[i] = ctypes.c_char( integer[i] )
+
+		pnames = (ctypes.POINTER(ctypes.c_char)*n)()
+
+		#charSpace : int = 0
+		#for i in range(n):
+	#		charSpace += len(name[i]) + 1
+
+
+		for i in range(0, n):
+			pnames[i] = ctypes.create_string_buffer(name[i].encode('utf-8'))
+			
+
+		lp_add_cols(
+			self._plp,
+			ctypes.c_int(n),
+			vobj,
+			vlb,
+			vub,
+			vint,
+			pnames )
 
 
 
-#void lp_add_col( LinearProgram *lp, double obj, double lb, double ub,
-#char integer, char *name, int nz, int *rowIdx, double *rowCoef );
+	def add_row( self, 
+			idx : List[int],
+			coef : List[float], 
+			name : str, 
+			sense : str, rhs : float ):
+
+		nz = len(idx)
+		assert( len(idx)==len(coef) )
+
+		vrowInt = (ctypes.c_int * nz)()
+		for i in range(nz):
+			vrowInt[i] = idx[i]
+
+		vrowCoef = (ctypes.c_double * nz)()
+		for i in range(nz):
+			vrowCoef[i] = coef[i]
+
+		if sense == Sense.EQUAL:
+			chars = ctypes.c_char(ord('E'))
+		elif sense == Sense.GREATER_OR_EQUAL:
+			chars = ctypes.c_char(ord('G'))
+		elif sense == Sense.LESS_OR_EQUAL:
+			chars = ctypes.c_char(ord('E'))
+		else:
+			raise 'sense not recognized: {}'.format(sense)
+
+		lp_add_row(
+			self._plp,
+			len(idx), vrowInt, vrowCoef, 
+			ctypes.c_char_p(name.encode('utf-8')), chars, ctypes.c_double(rhs) )
+
+
+
+
 
 	def cols(self) -> int:
 		""" returns the number of columns (variables) in the
@@ -82,7 +165,7 @@ class LinearProgram:
 		return lp_rows(self._plp)
 
 	def optimize(self, forceContinuous=False) -> int:
-		status : int = OptimizationStatus.Error
+		status = OptimizationStatus.Error
 		if forceContinuous==False:
 			status = lp_optimize(self._plp)
 		else:
@@ -98,13 +181,16 @@ class LinearProgram:
 	def __del__(self):
 		lp_free(self._plp)
 
-lplib = ctypes.CDLL('./lp.so')
+lplib = ctypes.CDLL('./lp-cbc-linux64.so')
 
 lp_create = lplib.lp_create
 lp_create.restype = ctypes.c_void_p
 
 lp_read = lplib.lp_read
 lp_read.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+
+lp_write = lplib.lp_write_lp
+lp_write.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
 
 lp_optimize = lplib.lp_optimize
 lp_optimize.argtypes = [ctypes.c_void_p]
@@ -132,11 +218,28 @@ lp_add_col.argtypes = [ctypes.c_void_p, ctypes.c_float,
 		ctypes.c_char_p, ctypes.c_int, ctypes.POINTER(ctypes.c_int),
 		ctypes.POINTER(ctypes.c_double)]
 
+lp_add_cols = lplib.lp_add_cols
+lp_add_cols.argtypes = [ 
+	ctypes.c_void_p,                 # lp
+	ctypes.c_int,                    # n cols
+	ctypes.POINTER(ctypes.c_double), # obj
+	ctypes.POINTER(ctypes.c_double), # lb
+	ctypes.POINTER(ctypes.c_double), # ub
+	ctypes.POINTER(ctypes.c_char),   # integer
+	ctypes.POINTER(ctypes.POINTER(ctypes.c_char)) ] # names
+
+lp_add_row = lplib.lp_add_row
+lp_add_row.argtypes = [ 
+	ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(ctypes.c_int),
+	ctypes.POINTER(ctypes.c_double), ctypes.c_char_p, ctypes.c_char, 
+	ctypes.c_double ]
+
+
 lp_free = lplib.lp_free
 lp_free.argtypes = [ctypes.c_void_p]
 
-lp = LinearProgram()
-lp.read("a.lp")
-lp.optimize()
+#lp = LinearProgram()
+#lp.read("a.lp")
+#lp.optimize()
 
 
