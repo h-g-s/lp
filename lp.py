@@ -69,6 +69,7 @@ class LinearProgram:
 			charInt, name.encode('utf-8'),
 			ctypes.c_int(len(rowIdx)), vrowInt, vrowCoef )
 
+
 	def add_cols(self, 
 		n : int, 
 		obj : List[float],
@@ -96,11 +97,6 @@ class LinearProgram:
 
 		pnames = (ctypes.POINTER(ctypes.c_char)*n)()
 
-		#charSpace : int = 0
-		#for i in range(n):
-	#		charSpace += len(name[i]) + 1
-
-
 		for i in range(0, n):
 			pnames[i] = ctypes.create_string_buffer(name[i].encode('utf-8'))
 			
@@ -113,7 +109,6 @@ class LinearProgram:
 			vub,
 			vint,
 			pnames )
-
 
 
 	def add_row( self, 
@@ -148,9 +143,6 @@ class LinearProgram:
 			ctypes.c_char_p(name.encode('utf-8')), chars, ctypes.c_double(rhs) )
 
 
-
-
-
 	def cols(self) -> int:
 		""" returns the number of columns (variables) in the
 		mixed-integer linear program
@@ -163,6 +155,7 @@ class LinearProgram:
 		mixed-integer linear program
 		"""
 		return lp_rows(self._plp)
+
 
 	def optimize(self, forceContinuous=False) -> int:
 		status = OptimizationStatus.Error
