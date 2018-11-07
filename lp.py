@@ -22,6 +22,7 @@ class LinearProgram:
 	"""
 	def __init__(self):
 		self._plp = lp_create()
+		self.tmpStr = ct.create_string_buffer(b'', 512)
 
 
 	def read(self, fileName : str):
@@ -174,12 +175,14 @@ class LinearProgram:
 
 	def row_name(self, row : int) -> str:
 		"""queries a row name"""
-		return lp_row_name(self._plp, ct.c_int(row)).value
+		lp_row_name(self._plp, ct.c_int(row), self.tmpStr)
+		return self.tmpStr.value.decode('utf-8')
 
 
 	def col_name(self, row : int) -> str:
 		"""queries a col name"""
-		return lp_col_name(self._plp, ct.c_int(row))
+		lp_col_name(self._plp, ct.c_int(row), self.tmpStr)
+		return self.tmpStr.value.decode('utf-8')
 
 
 	def col_lb(self, col : int) -> float:
@@ -287,11 +290,11 @@ lp_sense.argtypes = [ct.c_void_p, ct.c_int]
 lp_sense.restype = ct.c_char
 
 lp_row_name = lplib.lp_row_name
-lp_row_name.argtypes = [ct.c_void_p, ct.c_int]
+lp_row_name.argtypes = [ct.c_void_p, ct.c_int, ct.c_char_p]
 lp_row_name.restype = ct.c_char_p
 
 lp_col_name = lplib.lp_col_name
-lp_col_name.argtypes = [ct.c_void_p, ct.c_int]
+lp_col_name.argtypes = [ct.c_void_p, ct.c_int, ct.c_char_p]
 lp_col_name.restype = ct.c_char_p
 
 lp_col_lb = lplib.lp_col_lb

@@ -59,6 +59,9 @@ mip.optimize()
 
 sol = mip.x()
 
+for i in range(0,mip.cols()):
+	print( 'cname {}'.format(mip.col_name(i)) )
+
 for i in range(0, n):
 	for j in range(0, n):
 		if abs(sol[x[i][j]])>=0.99:
