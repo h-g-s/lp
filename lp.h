@@ -586,14 +586,14 @@ int lp_row( LinearProgram *lp, int row, int *idx, double *coef );
 int lp_col( LinearProgram *lp, int col, int *idx, double *coef );
 
 
-/** @brief return the right hand side of a given row
+/** @brief returns the right hand side of a given row
  *  @param lp the (integer) linear program
  *  @return right hand side of row row
  **/
 double lp_rhs( LinearProgram *lp, int row );
 
 
-/** @brief returns the sense of a given constraints
+/** @brief returns the sense of a given constraint
  *
  * Returns the sense of a given constraint:
  *

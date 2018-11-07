@@ -69,6 +69,5 @@ for i in range(0, n):
 	sys.stdout.write('\n')
 
 
-
 mip.write('test.lp')
 
