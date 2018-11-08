@@ -187,12 +187,12 @@ class LinearProgram:
 
 	def col_lb(self, col : int) -> float:
 		"""queries a column lower bound"""
-		return lp_col_lb(self._plp, ct.c_double(row))
+		return lp_col_lb(self._plp, col)
 
 
 	def col_ub(self, col : int) -> float:
 		"""queries a column upper bound"""
-		return lp_col_ub(self._plp, ct.c_double(row))
+		return lp_col_ub(self._plp, ct.c_int(col))
 
 
 	def col_index(self, name : str) -> int:
@@ -252,9 +252,9 @@ class LinearProgram:
 
 
 	def __del__(self):
-		lp_free(self._plp)
+		lp_free(ct.byref( ct.cast(self._plp, ct.c_void_p) )) 
 
-lplib = ct.CDLL('./lp-cbc-linux64.so')
+lplib = ct.CDLL('lp-grb-linux64.so')
 
 lp_create = lplib.lp_create
 lp_create.restype = ct.c_void_p
@@ -305,9 +305,9 @@ lp_col_ub = lplib.lp_col_ub
 lp_col_ub.argtypes = [ct.c_void_p, ct.c_int]
 lp_col_ub.restype = ct.c_double
 
-lp_col_index = lplib.lp_col_lb
-lp_col_index.argtypes = [ct.c_void_p, ct.c_char_p]
-lp_col_index.restype = ct.c_int
+#lp_col_index = lplib.lp_col_lb
+#lp_col_index.argtypes = [ct.c_void_p, ct.c_char_p]
+#lp_col_index.restype = ct.c_int
 
 lp_row_index = lplib.lp_row_index
 lp_row_index.argtypes = [ct.c_void_p, ct.c_char_p]
