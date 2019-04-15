@@ -20,9 +20,13 @@ class LinearProgram:
 	""" low level class to create, modify and 
 	optimize mixed-integer linear programs
 	"""
-	def __init__(self):
-		self._plp = lp_create()
+	def __init__(self, lpToCopy = None):
 		self.tmpStr = ct.create_string_buffer(b'', 512)
+		if lpToCopy == None:
+			self._plp = lp_create()
+		else
+			self._plp = lp_clone(ct.c_void_p( lpToCopy._plp ))
+
 
 
 	def read(self, fileName : str):
@@ -32,8 +36,8 @@ class LinearProgram:
 			fileName (str): file name
 		"""
 		lp_read( self._plp, fileName.encode('utf-8'))
-
 	
+
 	def write(self, fileName : str):
 		lp_write( self._plp, fileName.encode('utf-8'))
 
@@ -259,6 +263,9 @@ lplib = ct.CDLL('lp-grb-linux64.so')
 lp_create = lplib.lp_create
 lp_create.restype = ct.c_void_p
 
+lp_clone = lplib.lp_clone
+lp_clone.restype = ct.c_void_p
+
 lp_read = lplib.lp_read
 lp_read.argtypes = [ct.c_void_p, ct.c_char_p]
 
@@ -305,9 +312,9 @@ lp_col_ub = lplib.lp_col_ub
 lp_col_ub.argtypes = [ct.c_void_p, ct.c_int]
 lp_col_ub.restype = ct.c_double
 
-#lp_col_index = lplib.lp_col_lb
-#lp_col_index.argtypes = [ct.c_void_p, ct.c_char_p]
-#lp_col_index.restype = ct.c_int
+lp_col_index = lplib.lp_col_index
+lp_col_index.argtypes = [ct.c_void_p, ct.c_char_p]
+lp_col_index.restype = ct.c_int
 
 lp_row_index = lplib.lp_row_index
 lp_row_index.argtypes = [ct.c_void_p, ct.c_char_p]

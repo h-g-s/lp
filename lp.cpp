@@ -616,7 +616,7 @@ void lp_write_lp(LinearProgram *lp, const char *fileName)
     char format[64] = "LP";
     if (getFileType(fileName)=='M')
         strcpy( format, "MPS" );
-    cpxError = CPXwriteprob(LPcpxDefaultEnv, lp->cpxLP, fName, "MPS");
+    cpxError = CPXwriteprob(LPcpxDefaultEnv, lp->cpxLP, fName, format);
     lp_check_for_cpx_error(LPcpxDefaultEnv, cpxError, __FILE__, __LINE__);
 
     return;
